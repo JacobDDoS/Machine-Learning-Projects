@@ -6,7 +6,7 @@ from model import Linear_QNet, QTrainer
 
 MAX_MEMORY = 100_000
 BATCH_SIZE = 1000
-LR = 0.001
+LR = 0.00001
 
 class Agent:
     def __init__(self):
@@ -15,7 +15,7 @@ class Agent:
         self.gamma = 0.9 # discount rate (must be smaller than 1)
         self.memory = deque(maxlen=MAX_MEMORY) # will call popleft() if it takes up too much memory
         self.model = Linear_QNet(2, 32, 3)
-        self.model.load_state_dict(torch.load('./model/model.pth'))
+        # self.model.load_state_dict(torch.load('./model/model.pth'))
         self.trainer = QTrainer(self.model, lr=LR, gamma=self.gamma)
     
     def get_state(self, isHigher, isLower):

@@ -101,10 +101,10 @@ class PingPongGame():
     def resetBall(self, ball):
         global BALL_DIRECTION, BALL_X_SPEED, BALL_Y_SPEED
         ball.x = WIDTH//2
-        ball.y = HEIGHT//2
+        ball.y = HEIGHT//2 + random.randint(-200, 200)
         BALL_DIRECTION = Direction.LEFT
         BALL_X_SPEED = 12
-        BALL_Y_SPEED = 0
+        BALL_Y_SPEED = random.randint(-3, 3)
 
     def handleBall(self, ball, leftPaddle, rightPaddle):
         global BALL_DIRECTION, BALL_Y_SPEED, BALL_X_SPEED, leftScore, rightScore, done, reward, rightHits
@@ -132,14 +132,14 @@ class PingPongGame():
         #Check if ball has hit left or right wall and that it didn't go through a paddle
         if ball.x <= 0 and (ball.y+BALL_HEIGHT > leftPaddle.y or ball.y < leftPaddle.y + PADDLE_HEIGHT):
             rightScore += 1
-            if rightScore >= 5:
+            if rightScore >= 1:
                 done = True 
             self.reset(leftPaddle, rightPaddle, ball, done=False)
         if ball.x+BALL_WIDTH >= WIDTH and (ball.y+BALL_HEIGHT > rightPaddle.y or ball.y < rightPaddle.y + PADDLE_HEIGHT):
             leftScore += 1
-            if leftScore >= 5:
+            if leftScore >= 1:
                 done = True 
-            reward = -10
+            reward = -100
             self.reset(leftPaddle, rightPaddle, ball, done=False) 
         
         
@@ -158,7 +158,7 @@ class PingPongGame():
             ball.x = min(WIDTH-5-PADDLE_WIDTH, ball.x)
             BALL_X_SPEED += 1
             #update reward
-            reward = 10
+            reward = 100
             rightHits += 1
 
             #if top part of paddle, decrease ball.y, else increase ball.y
