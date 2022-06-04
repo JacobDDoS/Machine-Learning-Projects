@@ -23,7 +23,7 @@ BLACK = 0, 0, 0
 FPS = 200
 PADDLE_SPEED = 7
 
-BALL_X_SPEED = 12
+BALL_X_SPEED = 3
 BALL_Y_SPEED = 0
 
 PADDLE_WIDTH, PADDLE_HEIGHT = 15, 80
@@ -40,6 +40,9 @@ rightHits = 0
 
 rightRecord = 0
 reward = 0
+recordFile = open("./model/record.txt", "r")
+rightRecord = int(recordFile.read())
+recordFile.close()
 done = False
 
 class PingPongGame():
@@ -48,7 +51,10 @@ class PingPongGame():
         self.resetBall(ball)
         if done:
             leftScore, rightScore = 0, 0
+
+        # Comment during training
         # leftPaddle.y = HEIGHT//2 - PADDLE_HEIGHT//2
+
         rightPaddle.y = HEIGHT//2 - PADDLE_HEIGHT//2
 
     def drawWindow(self, leftPaddle, rightPaddle, ball):
@@ -101,10 +107,10 @@ class PingPongGame():
     def resetBall(self, ball):
         global BALL_DIRECTION, BALL_X_SPEED, BALL_Y_SPEED
         ball.x = WIDTH//2
-        ball.y = HEIGHT//2 + random.randint(-200, 200)
+        ball.y = HEIGHT//2
         BALL_DIRECTION = Direction.LEFT
-        BALL_X_SPEED = 12
-        BALL_Y_SPEED = random.randint(-3, 3)
+        BALL_X_SPEED = 3
+        BALL_Y_SPEED = 0
 
     def handleBall(self, ball, leftPaddle, rightPaddle):
         global BALL_DIRECTION, BALL_Y_SPEED, BALL_X_SPEED, leftScore, rightScore, done, reward, rightHits
@@ -146,19 +152,22 @@ class PingPongGame():
         if leftPaddle.colliderect(ball) or (ball.y+BALL_HEIGHT <= leftPaddle.y and ball.y >= leftPaddle.y+PADDLE_HEIGHT and ball.x <= 5+PADDLE_WIDTH):
             BALL_DIRECTION = Direction.RIGHT
             ball.x = max(5+PADDLE_WIDTH, ball.x) 
-            BALL_X_SPEED += 1
+            BALL_X_SPEED += 0.5
             #if top part of paddle, decrease ball.y, else increase ball.y
             if ball.y+BALL_HEIGHT//2 > leftPaddle.y+PADDLE_HEIGHT//2:
                 BALL_Y_SPEED += 1
             else:
                 BALL_Y_SPEED -= 1
+
+            #While training bot, randomize
+            # BALL_Y_SPEED = random.randint(-3, 3)
         
         if rightPaddle.colliderect(ball) or (ball.y+BALL_HEIGHT <= rightPaddle.y and ball.y >= rightPaddle.y+PADDLE_HEIGHT and ball.x >= WIDTH-5-PADDLE_WIDTH):
             BALL_DIRECTION = Direction.LEFT
             ball.x = min(WIDTH-5-PADDLE_WIDTH, ball.x)
-            BALL_X_SPEED += 1
+            BALL_X_SPEED += 0.5
             #update reward
-            reward = 100
+            reward = 10
             rightHits += 1
 
             #if top part of paddle, decrease ball.y, else increase ball.y
@@ -166,6 +175,9 @@ class PingPongGame():
                 BALL_Y_SPEED += 1
             else:
                 BALL_Y_SPEED -= 1
+
+            #While training bot, randomize
+            # BALL_Y_SPEED = random.randint(-3, 3)
 
     def playerVersusPlayer(self):
         leftPaddle = pygame.Rect(5, HEIGHT//2 - PADDLE_HEIGHT//2, PADDLE_WIDTH, PADDLE_HEIGHT)
@@ -189,8 +201,11 @@ class PingPongGame():
 
     def playerVersusBot(self):
         global reward, done, rightScore, rightRecord, rightRecord, rightHits
-        # leftPaddle = pygame.Rect(5, HEIGHT//2 - PADDLE_HEIGHT//2, PADDLE_WIDTH, PADDLE_HEIGHT)
-        leftPaddle = pygame.Rect(5,0, PADDLE_WIDTH, HEIGHT)
+        leftPaddle = pygame.Rect(5, HEIGHT//2 - PADDLE_HEIGHT//2, PADDLE_WIDTH, PADDLE_HEIGHT)
+
+        # For training
+        # leftPaddle = pygame.Rect(5,0, PADDLE_WIDTH, HEIGHT)
+
         rightPaddle = pygame.Rect(WIDTH-5-PADDLE_WIDTH, HEIGHT//2 - PADDLE_HEIGHT//2, PADDLE_WIDTH, PADDLE_HEIGHT)
         ball = pygame.Rect(WIDTH//2, HEIGHT//2, BALL_WIDTH, BALL_HEIGHT)
         clock = pygame.time.Clock()
@@ -203,8 +218,12 @@ class PingPongGame():
             #Retrive the current state
             isHigher = ball.y+BALL_HEIGHT < rightPaddle.y + 20
             isLower = ball.y+20 > rightPaddle.y + PADDLE_HEIGHT
-            distance = rightPaddle.x - ball.x + BALL_WIDTH
-            state_old = agent.get_state(isHigher, isLower)
+            isBallOnLeftSide = ball.x < WIDTH//2 
+            isBallOnRightSide = ball.x >= WIDTH//2
+            isBallYSpeedNegative = BALL_Y_SPEED < 0 
+            isBallYSpeedPositive = BALL_Y_SPEED > 0 
+            isBallYSpeedFast = abs(BALL_Y_SPEED) >= 9 
+            state_old = agent.get_state(isHigher, isLower, isBallOnLeftSide, isBallOnRightSide, isBallYSpeedNegative, isBallYSpeedPositive, isBallYSpeedFast)
 
             # print("Higher:", isHigher, "Lower:", isLower, "distance:",distance)
 
@@ -215,16 +234,24 @@ class PingPongGame():
             self.AIMove(final_move, rightPaddle)
 
             #get the new state
-            isHigher = ball.y+BALL_HEIGHT > rightPaddle.y 
-            isLower = ball.y < rightPaddle.y + PADDLE_HEIGHT
-            distance = rightPaddle.x - ball.x + BALL_WIDTH
-            state_new = agent.get_state(isHigher, isLower)
+            isHigher = ball.y+BALL_HEIGHT < rightPaddle.y + 20
+            isLower = ball.y+20 > rightPaddle.y + PADDLE_HEIGHT
+            isBallOnLeftSide = ball.x < WIDTH//2 
+            isBallOnRightSide = ball.x >= WIDTH//2
+            isBallYSpeedNegative = BALL_Y_SPEED < 0 
+            isBallYSpeedPositive = BALL_Y_SPEED > 0 
+            isBallYSpeedFast = abs(BALL_Y_SPEED) >= 9 
+            state_new = agent.get_state(isHigher, isLower, isBallOnLeftSide, isBallOnRightSide, isBallYSpeedNegative, isBallYSpeedPositive, isBallYSpeedFast)
+
+            if isBallOnRightSide and (isHigher or isLower):
+                reward = -20 
 
             #Train short-term memory
             agent.train_short_memory(state_old, final_move, reward, state_new, done) 
 
             #Remember
-            agent.remember(state_old, final_move, reward, state_new, done)
+            if not reward == 0:
+                agent.remember(state_old, final_move, reward, state_new, done)
 
             reward = 0
 
@@ -237,6 +264,9 @@ class PingPongGame():
                 if rightHits > rightRecord:
                     rightRecord = rightHits 
                     print("NEW RECORD:", rightRecord)
+                    with open("./model/record.txt", "w") as file1:
+                        file1.write(str(rightRecord))
+                        file1.close()
                     agent.model.save()
 
                 print("Game:", agent.n_games, "Score:", rightHits)
@@ -259,8 +289,7 @@ class PingPongGame():
     def main(self):
         titleText1 = TITLE_FONT.render("Press 1 for Player versus Player", 1, WHITE)
         titleText2 = TITLE_FONT.render("Press 2 for Player versus Bot", 1, WHITE)
-        titleText3 = TITLE_FONT.render("Press 3 for Bot versus Bot", 1, WHITE)
-        titleText = [titleText1, titleText2, titleText3]
+        titleText = [titleText1, titleText2]
         for idx in range(len(titleText)):
             WIN.blit(titleText[idx], (10, idx*70))
         pygame.display.update()

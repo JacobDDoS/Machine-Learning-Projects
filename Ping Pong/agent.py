@@ -12,14 +12,22 @@ class Agent:
     def __init__(self):
         self.n_games = 0
         self.epsilon = 0 # randomness
-        self.gamma = 0.9 # discount rate (must be smaller than 1)
+        self.gamma = 0.999 # discount rate (must be smaller than 1)
         self.memory = deque(maxlen=MAX_MEMORY) # will call popleft() if it takes up too much memory
-        self.model = Linear_QNet(2, 32, 3)
-        # self.model.load_state_dict(torch.load('./model/model.pth'))
+        self.model = Linear_QNet(7, 128, 3)
+
+        #Comment the next 5 lines if you want to train your own model
+        checkpoint = torch.load('./bestModel - 300+ Score/model.pth')
+        # Other model:
+        # checkpoint = torch.load('./model/model.pth') 
+        if checkpoint:
+            self.model.load_state_dict(checkpoint['state_dict']) 
+
+
         self.trainer = QTrainer(self.model, lr=LR, gamma=self.gamma)
     
-    def get_state(self, isHigher, isLower):
-        state = [isHigher, isLower]
+    def get_state(self, isHigher, isLower, isBallOnLeftSide, isBallOnRightSide, isBallYSpeedNegative, isBallYSpeedPositive, isBallYSpeedFast):
+        state = [isHigher, isLower, isBallOnLeftSide, isBallOnRightSide, isBallYSpeedNegative, isBallYSpeedPositive, isBallYSpeedFast]
         return np.array(state, dtype=int) 
 
     def remember(self, state, action, reward, next_state, done):
@@ -39,14 +47,15 @@ class Agent:
 
     def get_action(self, state):
         # random moves: tradeoff exploration / exploitation 
-        self.epsilon = 80 - self.n_games
+        self.epsilon = 50 - self.n_games
         final_move = [0, 0, 0] 
-        if random.randint(0, 200) < self.epsilon:
+        if random.randint(0, 150) < self.epsilon:
             move = random.randint(0, 2) 
             final_move[move] = 1
         else:
             state0 = torch.tensor(state, dtype=torch.float)
             prediction = self.model(state0)
+            # print("prediction:", prediction)
             move = torch.argmax(prediction).item() 
             final_move[move] = 1
 
